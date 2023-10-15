@@ -3,7 +3,7 @@ mod data;
 mod form;
 mod geek;
 
-
-fn main() {
-    geek::Geek::run();
+#[tokio::main]
+async fn main() -> form::Result<()> {
+    return geek::Geek::run().await;
 }

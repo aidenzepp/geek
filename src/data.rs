@@ -1,27 +1,11 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
-// thiserror...
-use thiserror::Error;
+use std::collections::HashMap;
 
 // crate...
-use crate::form::{Object, Record};
+use crate::form::{Object, Record, Result, Error};
 
-pub type Success = ();
-
-#[derive(Debug, Error)]
-pub enum Failure {
-    #[error("")]
-    Server,
-
-    #[error("")]
-    Database,
-
-    #[error("")]
-    OpenAI,
-}
-
-pub type Result = std::result::Result<Success, Failure>;
 
 #[derive(Debug, clap::Subcommand)]
 pub enum Command {
@@ -37,7 +21,7 @@ pub enum Command {
     },
     /// Returns the unique record from the database object.
     #[command(name = "select-one")]
-    SelectOne { 
+    SelectOne {
         /// The object to be selected from.
         object: Object,
 
@@ -105,7 +89,7 @@ pub enum Command {
         object: Object,
 
         /// The record to be created.
-        record: Record,
+        record: Vec<Record>,
     },
     
     //
@@ -169,155 +153,215 @@ pub enum Command {
     },
 }
 
+#[derive(Clone, Debug, clap::Args)]
+struct RecordP {
+    key: String,
+    val: String,
+}
+
 impl Command {
-    pub fn handle(command: Command) -> Result {
+    const ADDR: &str = "http://localhost:8080/api/data/";
+
+    pub async fn handle(client: &reqwest::Client, command: Command) -> Result<()> {
         let result = match command {
             //
             // Select
             //
     
-            Command::SelectAll { object } => Self::select_all(object),
-            Command::SelectOne { object, record } => Self::select_one(object, record),
-            Command::SelectIds { object, records } => Self::select_ids(object, records),
-            Command::Select404 { object } => Self::select_404(object),
+            Command::SelectAll { object } => Self::select_all(&client, object).await,
+            Command::SelectOne { object, record } => Self::select_one(&client, object, record).await,
+            Command::SelectIds { object, records } => Self::select_ids(&client, object, records).await,
+            Command::Select404 { object } => Self::select_404(&client, object).await,
         
             //
             // Search
             //
         
-            Command::SearchAny { object } => Self::search_any(object),
-            Command::SearchOne { object } => Self::search_one(object),
-            Command::Search404 { object } => Self::search_404(object),
-            Command::SearchNot { object } => Self::search_not(object),
+            Command::SearchAny { object } => Self::search_any(&client, object).await,
+            Command::SearchOne { object } => Self::search_one(&client, object).await,
+            Command::Search404 { object } => Self::search_404(&client, object).await,
+            Command::SearchNot { object } => Self::search_not(&client, object).await,
         
             //
             // Create
             //
         
-            Command::CreateAll { object } => Self::create_all(object),
-            Command::CreateOne { object, record } => Self::create_one(object, record),
+            Command::CreateAll { object } => Self::create_all(&client, object).await,
+            Command::CreateOne { object, record } => Self::create_one(&client, object, record).await,
             
             //
             // Update
             //
         
-            Command::UpdateAll { object } => Self::update_all(object),
-            Command::UpdateOne { object } => Self::update_one(object),
+            Command::UpdateAll { object } => Self::update_all(&client, object).await,
+            Command::UpdateOne { object } => Self::update_one(&client, object).await,
         
             //
             // Upsert
             //
         
-            Command::UpsertAll { object } => Self::upsert_all(object),
-            Command::UpsertOne { object } => Self::upsert_one(object),
+            Command::UpsertAll { object } => Self::upsert_all(&client, object).await,
+            Command::UpsertOne { object } => Self::upsert_one(&client, object).await,
         
             //
             // Expire
             //
         
-            Command::ExpireAll { object } => Self::expire_all(object),
-            Command::ExpireOne { object } => Self::expire_one(object),
+            Command::ExpireAll { object } => Self::expire_all(&client, object).await,
+            Command::ExpireOne { object } => Self::expire_one(&client, object).await,
         
             //
             // Delete
             //
         
-            Command::DeleteAll { object } => Self::delete_all(object),
-            Command::DeleteOne { object } => Self::delete_one(object),
+            Command::DeleteAll { object } => Self::delete_all(&client, object).await,
+            Command::DeleteOne { object } => Self::delete_one(&client, object).await,
         };
     
         return result;
     }
 
-    fn select_all(object: Object) -> Result {
-        println!("{:?}", object);
+    async fn select_all(client: &reqwest::Client, object: Object) -> Result<()> {
+        let addr: String = Self::ADDR.to_string() + &object;
+        let body: String = client.get(addr).send().await?.text().await?;
+        let json: String = Self::stylify(body)?;
+        
+        println!("{}", json);
+
+        return Ok(());
+    }
+
+    async fn select_one(client: &reqwest::Client, object: Object, record: Record) -> Result<()> {
+        let addr: String = Self::ADDR.to_string() + &object + "/" + &record;
+        let body: String = client.get(addr).send().await?.text().await?;
+        let json: String = Self::stylify(body)?;
+
+        println!("{}", json);
 
         // Implementation goes here
         return Ok(());
     }
 
-    fn select_one(object: Object, record: Record) -> Result {
+    async fn select_ids(client: &reqwest::Client, object: Object, records: Vec<Record>) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn select_ids(object: Object, records: Vec<Record>) -> Result {
+    async fn select_404(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn select_404(object: Object) -> Result {
+    async fn search_any(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn search_any(object: Object) -> Result {
+    async fn search_one(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn search_one(object: Object) -> Result {
+    async fn search_404(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn search_404(object: Object) -> Result {
+    async fn search_not(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn search_not(object: Object) -> Result {
+    async fn create_all(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn create_all(object: Object) -> Result {
+    async fn create_one(client: &reqwest::Client, object: Object, record: Vec<String>) -> Result<()> {
+        let addr: String = Self::ADDR.to_string() + &object;
+        let post: String = Self::jsonify(record)?;
+        let body: String = client.post(addr).json(&post).send().await?.text().await?;
+        let json: String = Self::stylify(body)?;
+        
+        println!("{}", json);
+
+        return Ok(());
+    }
+
+    async fn update_all(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn create_one(object: Object, record: Record) -> Result {
+    async fn update_one(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn update_all(object: Object) -> Result {
+    async fn upsert_all(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn update_one(object: Object) -> Result {
+    async fn upsert_one(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn upsert_all(object: Object) -> Result {
+    async fn expire_all(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn upsert_one(object: Object) -> Result {
+    async fn expire_one(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn expire_all(object: Object) -> Result {
+    async fn delete_all(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn expire_one(object: Object) -> Result {
+    async fn delete_one(client: &reqwest::Client, object: Object) -> Result<()> {
         // Implementation goes here
         return Ok(());
     }
 
-    fn delete_all(object: Object) -> Result {
-        // Implementation goes here
-        return Ok(());
+    fn hashify(args: Vec<String>) -> Result<HashMap<String, String>> {
+        let mut map: HashMap<String, String> = HashMap::new();
+
+        for arg in args {
+            let pairs: Vec<&str> = arg.splitn(2, '=').collect();
+
+            // Must be K=V pair.
+            if pairs.len() != 2 {
+                let message: String = "Each record must be in the format 'key=value'".to_string();
+
+                return Err(Error::Arguments(message));
+            }
+
+            map.insert(
+                pairs.get(0).unwrap().to_string(), 
+                pairs.get(1).unwrap().to_string()
+            );
+        }
+
+        return Ok(map);
+    }
+    
+    fn jsonify(args: Vec<String>) -> Result<String> {
+        let hash: HashMap<String, String> = Self::hashify(args)?;
+        let temp: serde_json::Value = serde_json::json!(hash);
+        let json: String = serde_json::to_string(&temp)?;
+
+        return Ok(json);
     }
 
-    fn delete_one(object: Object) -> Result {
-        // Implementation goes here
-        return Ok(());
+    fn stylify(body: String) -> Result<String> {
+        let temp: serde_json::Value = serde_json::from_str(&body)?;
+        let json: String = serde_json::to_string_pretty(&temp)?;
+
+        return Ok(json);
     }
 }

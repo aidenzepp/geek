@@ -2,29 +2,35 @@
 use clap::Parser;
 
 // crate...
-use crate::form::Section;
+use crate::form;
 use crate::auth;
 use crate::data;
 
-#[derive(Debug, clap::Parser)]
+#[derive(Debug, Parser)]
 #[command(name = "MintedGeek CLI")]
 #[command(author = "MintedGeek")]
 #[command(version = "1.0")]
 pub struct Geek {
     /// Represents the 
     #[command(subcommand)]
-    section: Section,
+    section: form::Section,
 }
 
 impl Geek {
-    pub fn run() {
-        match Geek::parse().section {
-            Section::Auth(command) => {
-                let _ = auth::Command::handle(command);
-            },
-            Section::Data(command) => {
-                let _ = data::Command::handle(command);
-            },
-        }
+    pub async fn run() -> form::Result<()> {
+        let client = reqwest::Client::new();
+
+        return match Geek::parse().section {
+            form::Section::Auth(command) => Self::handle_auth(&client, command).await,
+            form::Section::Data(command) => Self::handle_data(&client, command).await,
+        };
+    }
+
+    async fn handle_auth(client: &reqwest::Client, command: auth::Command) -> form::Result<()> {
+        return auth::Command::handle(&client, command).await;
+    }
+
+    async fn handle_data(client: &reqwest::Client, command: data::Command) -> form::Result<()> {
+        return data::Command::handle(&client, command).await;
     }
 }
